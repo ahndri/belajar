@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Aura Photo Storage | Premium Experience",
+  title: "Dompet Foto | Premium Experience",
   description: "Experience your photos in a premium, modern, and high-performance gallery. Powered by Vercel.",
 };
 

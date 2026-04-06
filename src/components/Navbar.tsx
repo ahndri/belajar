@@ -27,7 +27,7 @@ export default function Navbar() {
             <Camera className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-            Aura Store
+            Dompet Foto
           </span>
         </Link>
 
