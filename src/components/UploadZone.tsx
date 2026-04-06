@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Upload, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import { put } from "@vercel/blob";
+import { Upload, X, CheckCircle2, AlertCircle, Loader2, PartyPopper } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface FileWithStatus {
   file: File;
@@ -12,8 +12,10 @@ interface FileWithStatus {
 }
 
 export default function UploadZone() {
+  const router = useRouter();
   const [files, setFiles] = useState<FileWithStatus[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [globalStatus, setGlobalStatus] = useState<"idle" | "uploading" | "success">("idle");
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -38,7 +40,10 @@ export default function UploadZone() {
 
   const uploadAll = async () => {
     const updatedFiles = [...files];
+    setGlobalStatus("uploading");
     
+    let anyError = false;
+
     for (let i = 0; i < updatedFiles.length; i++) {
       if (updatedFiles[i].status === "success") continue;
       
@@ -80,20 +85,44 @@ export default function UploadZone() {
       } catch (err: any) {
         updatedFiles[i].status = "error";
         updatedFiles[i].error = err.message || "Gagal mengunggah.";
+        anyError = true;
       }
       setFiles([...updatedFiles]);
+    }
+
+    if (!anyError && updatedFiles.length > 0) {
+      setGlobalStatus("success");
+      // Wait for 2 seconds then redirect to gallery
+      setTimeout(() => {
+        router.push("/gallery");
+      }, 2000);
+    } else {
+      setGlobalStatus("idle");
     }
   };
 
   return (
     <div className="flex flex-col gap-8 w-full max-w-4xl mx-auto py-12">
+      {/* Success Banner */}
+      {globalStatus === "success" && (
+        <div className="flex items-center gap-4 p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl animate-in zoom-in duration-500">
+          <div className="p-3 bg-emerald-500/20 rounded-2xl">
+            <PartyPopper className="w-8 h-8 text-emerald-400" />
+          </div>
+          <div>
+            <h4 className="text-xl font-bold text-white">Berhasil!</h4>
+            <p className="text-emerald-400/80 text-sm">Semua foto telah tersimpan. Mengalihkan ke galeri...</p>
+          </div>
+        </div>
+      )}
+
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-3xl transition-all duration-300 ${
           isDragging ? "border-indigo-500 bg-indigo-500/5 scale-[1.02]" : "border-white/10 bg-white/5 hover:bg-white/10"
-        }`}
+        } ${globalStatus === "success" ? "opacity-50 pointer-events-none" : ""}`}
       >
         <div className="bg-indigo-500/20 p-6 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
           <Upload className="w-10 h-10 text-indigo-400" />
@@ -106,6 +135,7 @@ export default function UploadZone() {
           type="file"
           multiple
           accept="image/*"
+          disabled={globalStatus !== "idle"}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           onChange={(e) => {
             const selectedFiles = Array.from(e.target.files || []).filter(f => f.type.startsWith("image/"));
@@ -120,9 +150,10 @@ export default function UploadZone() {
             <h4 className="text-white font-bold">Daftar Unggahan ({files.length})</h4>
             <button
               onClick={uploadAll}
-              className="px-6 py-2 premium-gradient text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg active:scale-95"
+              disabled={globalStatus !== "idle"}
+              className={`px-6 py-2 premium-gradient text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:hover:scale-100`}
             >
-              Mulai Unggah Semua
+              {globalStatus === "uploading" ? "Sedang Mengunggah..." : "Mulai Unggah Semua"}
             </button>
           </div>
 
