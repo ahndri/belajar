@@ -6,12 +6,19 @@ export async function POST(request: Request): Promise<NextResponse> {
   const filename = searchParams.get('filename');
 
   if (!filename) {
-    return NextResponse.json({ error: "Filename is required" }, { status: 400 });
+    return NextResponse.json({ error: "Nama file wajib ada." }, { status: 400 });
   }
 
-  const blob = await put(filename, request.body!, {
-    access: 'public',
-  });
-
-  return NextResponse.json(blob);
+  try {
+    const blob = await put(filename, request.body!, {
+      access: 'public',
+    });
+    return NextResponse.json(blob);
+  } catch (error: any) {
+    console.error("Vercel Blob Error:", error);
+    return NextResponse.json({ 
+      error: "Gagal menyimpan ke Vercel Blob. Pastikan BLOB_READ_WRITE_TOKEN sudah diatur di Vercel Dashboard.",
+      details: error.message 
+    }, { status: 500 });
+  }
 }

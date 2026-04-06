@@ -51,10 +51,16 @@ export default function UploadZone() {
           body: updatedFiles[i].file,
         });
 
-        const newBlob = await response.json();
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Gagal mengunggah ke Vercel Blob.");
+        }
+        
+        const newBlob = data;
         
         // Store metadata in Postgres
-        await fetch('/api/photos', {
+        const pgResponse = await fetch('/api/photos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -64,11 +70,16 @@ export default function UploadZone() {
           }),
         });
 
+        const pgData = await pgResponse.json();
+        if (!pgResponse.ok) {
+           throw new Error(pgData.error || "Gagal menyimpan metadata ke database.");
+        }
+
         updatedFiles[i].status = "success";
         updatedFiles[i].url = newBlob.url;
-      } catch (err) {
+      } catch (err: any) {
         updatedFiles[i].status = "error";
-        updatedFiles[i].error = "Gagal mengunggah.";
+        updatedFiles[i].error = err.message || "Gagal mengunggah.";
       }
       setFiles([...updatedFiles]);
     }
@@ -117,34 +128,44 @@ export default function UploadZone() {
 
           <div className="grid gap-3">
             {files.map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-4 glass rounded-2xl border border-white/5 group">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden flex items-center justify-center">
-                    {/* Simplified preview, in real app would use URL.createObjectURL */}
-                    <div className="w-full h-full bg-indigo-500/20 flex items-center justify-center">
-                      <Upload className="w-4 h-4 text-indigo-400" />
+              <div key={index} className="flex flex-col gap-2 p-4 glass rounded-2xl border border-white/5 group">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden flex items-center justify-center">
+                      <div className="w-full h-full bg-indigo-500/20 flex items-center justify-center">
+                        <Upload className="w-4 h-4 text-indigo-400" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-white text-sm font-medium truncate">{item.file.name}</span>
+                      <span className="text-gray-500 text-xs">{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
                     </div>
                   </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-white text-sm font-medium truncate">{item.file.name}</span>
-                    <span className="text-gray-500 text-xs">{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
+
+                  <div className="flex items-center gap-4">
+                    {item.status === "uploading" && <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />}
+                    {item.status === "success" && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+                    {item.status === "error" && <AlertCircle className="w-5 h-5 text-red-500" />}
+                    
+                    {item.status === "idle" && (
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4 text-gray-400" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  {item.status === "uploading" && <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />}
-                  {item.status === "success" && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-                  {item.status === "error" && <AlertCircle className="w-5 h-5 text-red-400" />}
-                  
-                  {item.status === "idle" && (
-                    <button
-                      onClick={() => removeFile(index)}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                    >
-                      <X className="w-4 h-4 text-gray-400" />
-                    </button>
-                  )}
-                </div>
+                {item.status === "error" && item.error && (
+                  <div className="mt-2 flex items-start gap-2 p-2 bg-red-500/10 border border-red-500/20 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
+                    <AlertCircle className="w-3 h-3 text-red-400 mt-0.5 shrink-0" />
+                    <p className="text-[10px] text-red-400 font-medium leading-tight">
+                      {item.error}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
