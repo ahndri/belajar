@@ -34,7 +34,11 @@ export async function POST(request: Request) {
     `;
 
     return NextResponse.json(result.rows[0]);
-  } catch (error) {
-    return NextResponse.json({ error }, { status: 500 });
+  } catch (error: any) {
+    console.error("Vercel Postgres Error:", error);
+    return NextResponse.json({ 
+      error: "Gagal menyimpan ke database Vercel Postgres. Pastikan POSTGRES_URL sudah diatur di Vercel Dashboard.",
+      details: error.message 
+    }, { status: 500 });
   }
 }
